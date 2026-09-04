@@ -1,14 +1,17 @@
 from flask import Blueprint, jsonify, request
-from app import db
-from app.models import Product, Category, User, Order, OrderItem
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
+
+from app import db
+from app.models import User, Category, Product, Order, OrderItem
+
 
 main = Blueprint("main", __name__)
 
 
-# =========================
+# ============================================================
 # API
-# =========================
+# ============================================================
 
 @main.route("/api", methods=["GET"])
 def api():
@@ -18,17 +21,17 @@ def api():
     }), 200
 
 
-# =========================
+# ============================================================
 # PRODUCTS
-# =========================
+# ============================================================
 
 @main.route("/products", methods=["GET"])
 def products():
-    products = Product.query.all()
+    products_list = Product.query.all()
 
     return jsonify([
         product.to_dict()
-        for product in products
+        for product in products_list
     ]), 200
 
 
@@ -53,67 +56,77 @@ def create_product():
             "message": "Request body is required"
         }), 400
 
-    required_fields = [
-        "name",
-        "price",
-        "stock",
-        "category_id"
-    ]
+    name = data.get("name")
+    description = data.get("description")
+    price = data.get("price")
+    stock = data.get("stock")
+    category_id = data.get("category_id")
 
-    for field in required_fields:
-        if field not in data:
-            return jsonify({
-                "message": f"{field} is required"
-            }), 400
-
-    if not isinstance(data["name"], str) or not data["name"].strip():
+    if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
         }), 400
 
-    try:
-        price = float(data["price"])
-    except (TypeError, ValueError):
+    if price is None:
         return jsonify({
-            "message": "Price must be a valid number"
+            "message": "Price is required"
         }), 400
 
-    if price < 0:
+    if not isinstance(price, (int, float)) or price < 0:
         return jsonify({
-            "message": "Price cannot be negative"
+            "message": "Price must be a non-negative number"
         }), 400
 
-    try:
-        stock = int(data["stock"])
-    except (TypeError, ValueError):
+    if stock is None:
         return jsonify({
-            "message": "Stock must be a valid integer"
+            "message": "Stock is required"
         }), 400
 
-    if stock < 0:
+    if not isinstance(stock, int) or stock < 0:
         return jsonify({
-            "message": "Stock cannot be negative"
+            "message": "Stock must be a non-negative integer"
         }), 400
 
-    category = Category.query.get(data["category_id"])
+    if category_id is None:
+        return jsonify({
+            "message": "Category ID is required"
+        }), 400
+
+    category = Category.query.get(category_id)
 
     if not category:
         return jsonify({
             "message": "Category not found"
         }), 404
 
-    product = Product(
-        name=data["name"].strip(),
-        description=data.get("description"),
-        price=price,
-        stock=stock,
-        category_id=category.id
-    )
+    try:
+        product = Product(
+            name=name.strip(),
+            description=description,
+            price=price,
+            stock=stock,
+            category_id=category_id
+        )
 
-    db.session.add(product)
-    db.session.commit()
+        db.session.add(product)
+        db.session.commit()
 
-    return jsonify(product.to_dict()), 201
+        return jsonify(product.to_dict()), 201
+
+    except IntegrityError:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Failed to create product"
+        }), 400
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
 @main.route("/products/<int:id>", methods=["PUT"])
@@ -133,59 +146,69 @@ def update_product(id):
         }), 400
 
     if "name" in data:
-        if not isinstance(data["name"], str) or not data["name"].strip():
+        name = data.get("name")
+
+        if not isinstance(name, str) or not name.strip():
             return jsonify({
                 "message": "Name must be a non-empty string"
             }), 400
 
-        product.name = data["name"].strip()
+        product.name = name.strip()
 
     if "description" in data:
-        product.description = data["description"]
+        product.description = data.get("description")
 
     if "price" in data:
-        try:
-            price = float(data["price"])
-        except (TypeError, ValueError):
-            return jsonify({
-                "message": "Price must be a valid number"
-            }), 400
+        price = data.get("price")
 
-        if price < 0:
+        if not isinstance(price, (int, float)) or price < 0:
             return jsonify({
-                "message": "Price cannot be negative"
+                "message": "Price must be a non-negative number"
             }), 400
 
         product.price = price
 
     if "stock" in data:
-        try:
-            stock = int(data["stock"])
-        except (TypeError, ValueError):
-            return jsonify({
-                "message": "Stock must be a valid integer"
-            }), 400
+        stock = data.get("stock")
 
-        if stock < 0:
+        if not isinstance(stock, int) or stock < 0:
             return jsonify({
-                "message": "Stock cannot be negative"
+                "message": "Stock must be a non-negative integer"
             }), 400
 
         product.stock = stock
 
     if "category_id" in data:
-        category = Category.query.get(data["category_id"])
+        category_id = data.get("category_id")
+
+        category = Category.query.get(category_id)
 
         if not category:
             return jsonify({
                 "message": "Category not found"
             }), 404
 
-        product.category_id = category.id
+        product.category_id = category_id
 
-    db.session.commit()
+    try:
+        db.session.commit()
 
-    return jsonify(product.to_dict()), 200
+        return jsonify(product.to_dict()), 200
+
+    except IntegrityError:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Failed to update product"
+        }), 400
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
 @main.route("/products/<int:id>", methods=["DELETE"])
@@ -199,31 +222,40 @@ def delete_product(id):
 
     if product.order_items:
         return jsonify({
-            "message": "Product cannot be deleted because it belongs to an order"
+            "message": "Cannot delete product because it is linked to an order"
         }), 409
 
-    db.session.delete(product)
-    db.session.commit()
+    try:
+        db.session.delete(product)
+        db.session.commit()
 
-    return jsonify({
-        "message": "Product deleted successfully"
-    }), 200
+        return jsonify({
+            "message": "Product deleted successfully"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
-# =========================
+# ============================================================
 # CATEGORIES
-# =========================
+# ============================================================
 
 @main.route("/categories", methods=["GET"])
 def categories():
-    categories = Category.query.all()
+    categories_list = Category.query.all()
 
     return jsonify([
         {
             "id": category.id,
             "name": category.name
         }
-        for category in categories
+        for category in categories_list
     ]), 200
 
 
@@ -255,20 +287,15 @@ def create_category():
             "message": "Request body is required"
         }), 400
 
-    if "name" not in data:
-        return jsonify({
-            "message": "name is required"
-        }), 400
+    name = data.get("name")
 
-    if not isinstance(data["name"], str) or not data["name"].strip():
+    if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
         }), 400
 
-    name = data["name"].strip()
-
     existing_category = Category.query.filter_by(
-        name=name
+        name=name.strip()
     ).first()
 
     if existing_category:
@@ -276,15 +303,33 @@ def create_category():
             "message": "Category already exists"
         }), 409
 
-    category = Category(name=name)
+    try:
+        category = Category(
+            name=name.strip()
+        )
 
-    db.session.add(category)
-    db.session.commit()
+        db.session.add(category)
+        db.session.commit()
 
-    return jsonify({
-        "id": category.id,
-        "name": category.name
-    }), 201
+        return jsonify({
+            "id": category.id,
+            "name": category.name
+        }), 201
+
+    except IntegrityError:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Category already exists"
+        }), 409
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
 @main.route("/categories/<int:id>", methods=["PUT"])
@@ -303,20 +348,15 @@ def update_category(id):
             "message": "Request body is required"
         }), 400
 
-    if "name" not in data:
-        return jsonify({
-            "message": "name is required"
-        }), 400
+    name = data.get("name")
 
-    if not isinstance(data["name"], str) or not data["name"].strip():
+    if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
         }), 400
 
-    name = data["name"].strip()
-
     existing_category = Category.query.filter(
-        Category.name == name,
+        Category.name == name.strip(),
         Category.id != id
     ).first()
 
@@ -325,14 +365,30 @@ def update_category(id):
             "message": "Category already exists"
         }), 409
 
-    category.name = name
+    try:
+        category.name = name.strip()
 
-    db.session.commit()
+        db.session.commit()
 
-    return jsonify({
-        "id": category.id,
-        "name": category.name
-    }), 200
+        return jsonify({
+            "id": category.id,
+            "name": category.name
+        }), 200
+
+    except IntegrityError:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Category already exists"
+        }), 409
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
 @main.route("/categories/<int:id>", methods=["DELETE"])
@@ -346,35 +402,29 @@ def delete_category(id):
 
     if category.products:
         return jsonify({
-            "message": "Category cannot be deleted because it has products"
+            "message": "Cannot delete category because it has products"
         }), 409
 
-    db.session.delete(category)
-    db.session.commit()
+    try:
+        db.session.delete(category)
+        db.session.commit()
 
-    return jsonify({
-        "message": "Category deleted successfully"
-    }), 200
+        return jsonify({
+            "message": "Category deleted successfully"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
-# =========================
+# ============================================================
 # USERS
-# =========================
-
-@main.route("/users", methods=["GET"])
-def users():
-    users = User.query.all()
-
-    return jsonify([
-        {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "created_at": user.created_at.isoformat()
-        }
-        for user in users
-    ]), 200
-
+# ============================================================
 
 @main.route("/users", methods=["POST"])
 def create_user():
@@ -385,37 +435,27 @@ def create_user():
             "message": "Request body is required"
         }), 400
 
-    required_fields = [
-        "name",
-        "email",
-        "password"
-    ]
+    name = data.get("name")
+    email = data.get("email")
+    password = data.get("password")
 
-    for field in required_fields:
-        if field not in data:
-            return jsonify({
-                "message": f"{field} is required"
-            }), 400
-
-    if not isinstance(data["name"], str) or not data["name"].strip():
+    if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
         }), 400
 
-    if not isinstance(data["email"], str) or not data["email"].strip():
+    if not isinstance(email, str) or not email.strip():
         return jsonify({
-            "message": "Email cannot be empty"
+            "message": "Email is required"
         }), 400
 
-    if not isinstance(data["password"], str) or len(data["password"]) < 6:
+    if not isinstance(password, str) or len(password) < 6:
         return jsonify({
             "message": "Password must be at least 6 characters"
         }), 400
 
-    email = data["email"].strip().lower()
-
     existing_user = User.query.filter_by(
-        email=email
+        email=email.strip()
     ).first()
 
     if existing_user:
@@ -423,26 +463,76 @@ def create_user():
             "message": "Email already registered"
         }), 409
 
-    user = User(
-        name=data["name"].strip(),
-        email=email,
-        password=generate_password_hash(data["password"])
-    )
+    try:
+        user = User(
+            name=name.strip(),
+            email=email.strip(),
+            password=generate_password_hash(password)
+        )
 
-    db.session.add(user)
-    db.session.commit()
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "created_at": user.created_at.isoformat()
+        }), 201
+
+    except IntegrityError:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Email already registered"
+        }), 409
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
+
+
+@main.route("/users", methods=["GET"])
+def users():
+    users_list = User.query.all()
+
+    return jsonify([
+        {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "created_at": user.created_at.isoformat()
+        }
+        for user in users_list
+    ]), 200
+
+
+@main.route("/users/<int:id>", methods=["GET"])
+def get_user(id):
+    user = User.query.get(id)
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
 
     return jsonify({
         "id": user.id,
         "name": user.name,
         "email": user.email,
+        "role": user.role,
         "created_at": user.created_at.isoformat()
-    }), 201
+    }), 200
 
 
-# =========================
+# ============================================================
 # AUTH
-# =========================
+# ============================================================
 
 @main.route("/auth/login", methods=["POST"])
 def login():
@@ -453,26 +543,19 @@ def login():
             "message": "Request body is required"
         }), 400
 
-    if "email" not in data or "password" not in data:
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
         return jsonify({
             "message": "Email and password are required"
         }), 400
 
-    email = data["email"].strip().lower()
-
     user = User.query.filter_by(
-        email=email
+        email=email.strip()
     ).first()
 
-    if not user:
-        return jsonify({
-            "message": "Invalid email or password"
-        }), 401
-
-    if not check_password_hash(
-        user.password,
-        data["password"]
-    ):
+    if not user or not check_password_hash(user.password, password):
         return jsonify({
             "message": "Invalid email or password"
         }), 401
@@ -487,129 +570,20 @@ def login():
     }), 200
 
 
-# =========================
+# ============================================================
 # ORDERS
-# =========================
-
-@main.route("/orders", methods=["POST"])
-def create_order():
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "message": "Request body is required"
-        }), 400
-
-    if "user_id" not in data:
-        return jsonify({
-            "message": "user_id is required"
-        }), 400
-
-    if "items" not in data or not isinstance(data["items"], list):
-        return jsonify({
-            "message": "items must be a list"
-        }), 400
-
-    if len(data["items"]) == 0:
-        return jsonify({
-            "message": "Order must contain at least one item"
-        }), 400
-
-    user = User.query.get(data["user_id"])
-
-    if not user:
-        return jsonify({
-            "message": "User not found"
-        }), 404
-
-    total = 0
-    order_items_data = []
-
-    for item in data["items"]:
-        if "product_id" not in item or "quantity" not in item:
-            return jsonify({
-                "message": "Each item requires product_id and quantity"
-            }), 400
-
-        product = Product.query.get(item["product_id"])
-
-        if not product:
-            return jsonify({
-                "message": f"Product {item['product_id']} not found"
-            }), 404
-
-        quantity = item["quantity"]
-
-        if not isinstance(quantity, int) or quantity <= 0:
-            return jsonify({
-                "message": "Quantity must be a positive integer"
-            }), 400
-
-        if product.stock < quantity:
-            return jsonify({
-                "message": f"Insufficient stock for product {product.id}"
-            }), 400
-
-        item_total = float(product.price) * quantity
-        total += item_total
-
-        order_items_data.append({
-            "product": product,
-            "quantity": quantity,
-            "price": product.price
-        })
-
-    order = Order(
-        user_id=user.id,
-        total=total,
-        status="pending"
-    )
-
-    db.session.add(order)
-
-    for item_data in order_items_data:
-        product = item_data["product"]
-
-        order_item = OrderItem(
-            order=order,
-            product=product,
-            quantity=item_data["quantity"],
-            price=item_data["price"]
-        )
-
-        product.stock -= item_data["quantity"]
-
-        db.session.add(order_item)
-
-    db.session.commit()
-
-    return jsonify({
-        "id": order.id,
-        "user_id": order.user_id,
-        "total": float(order.total),
-        "status": order.status,
-        "created_at": order.created_at.isoformat(),
-        "items": [
-            {
-                "product_id": item.product_id,
-                "quantity": item.quantity,
-                "price": float(item.price)
-            }
-            for item in order.order_items
-        ]
-    }), 201
-
+# ============================================================
 
 @main.route("/orders", methods=["GET"])
 def orders():
     user_id = request.args.get("user_id", type=int)
 
-    if user_id:
-        orders = Order.query.filter_by(
-            user_id=user_id
-        ).all()
-    else:
-        orders = Order.query.all()
+    query = Order.query
+
+    if user_id is not None:
+        query = query.filter_by(user_id=user_id)
+
+    orders_list = query.all()
 
     return jsonify([
         {
@@ -627,7 +601,7 @@ def orders():
                 for item in order.order_items
             ]
         }
-        for order in orders
+        for order in orders_list
     ]), 200
 
 
@@ -658,11 +632,136 @@ def get_order(id):
                     "price": float(item.product.price),
                     "stock": item.product.stock,
                     "category_id": item.product.category_id
-                }
+                } if item.product else None
             }
             for item in order.order_items
         ]
     }), 200
+
+
+@main.route("/orders", methods=["POST"])
+def create_order():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required"
+        }), 400
+
+    user_id = data.get("user_id")
+    items = data.get("items")
+
+    if user_id is None:
+        return jsonify({
+            "message": "user_id is required"
+        }), 400
+
+    if not isinstance(items, list) or not items:
+        return jsonify({
+            "message": "items must be a non-empty list"
+        }), 400
+
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    try:
+        order = Order(
+            user_id=user_id,
+            total=0,
+            status="pending"
+        )
+
+        db.session.add(order)
+
+        total = 0
+
+        for item_data in items:
+            if not isinstance(item_data, dict):
+                db.session.rollback()
+
+                return jsonify({
+                    "message": "Each item must be an object"
+                }), 400
+
+            product_id = item_data.get("product_id")
+            quantity = item_data.get("quantity")
+
+            if product_id is None:
+                db.session.rollback()
+
+                return jsonify({
+                    "message": "product_id is required"
+                }), 400
+
+            if not isinstance(quantity, int) or quantity <= 0:
+                db.session.rollback()
+
+                return jsonify({
+                    "message": "quantity must be a positive integer"
+                }), 400
+
+            product = Product.query.get(product_id)
+
+            if not product:
+                db.session.rollback()
+
+                return jsonify({
+                    "message": f"Product {product_id} not found"
+                }), 404
+
+            if product.stock < quantity:
+                db.session.rollback()
+
+                return jsonify({
+                    "message": f"Insufficient stock for product {product_id}"
+                }), 400
+
+            item_price = product.price
+            item_total = item_price * quantity
+            total += item_total
+
+            product.stock -= quantity
+
+            order_item = OrderItem(
+                order=order,
+                product_id=product_id,
+                quantity=quantity,
+                price=item_price
+            )
+
+            db.session.add(order_item)
+
+        order.total = total
+
+        db.session.commit()
+
+        return jsonify({
+            "id": order.id,
+            "user_id": order.user_id,
+            "total": float(order.total),
+            "status": order.status,
+            "created_at": order.created_at.isoformat(),
+            "items": [
+                {
+                    "product_id": item.product_id,
+                    "quantity": item.quantity,
+                    "price": float(item.price)
+                }
+                for item in order.order_items
+            ]
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Failed to create order",
+            "error": str(e)
+        }), 500
 
 
 @main.route("/orders/<int:id>", methods=["PUT"])
@@ -681,34 +780,41 @@ def update_order(id):
             "message": "Request body is required"
         }), 400
 
-    if "status" not in data:
+    if "status" in data:
+        status = data.get("status")
+
+        allowed_statuses = [
+            "pending",
+            "processing",
+            "completed",
+            "cancelled"
+        ]
+
+        if status not in allowed_statuses:
+            return jsonify({
+                "message": "Invalid order status"
+            }), 400
+
+        order.status = status
+
+    try:
+        db.session.commit()
+
         return jsonify({
-            "message": "status is required"
-        }), 400
+            "id": order.id,
+            "user_id": order.user_id,
+            "total": float(order.total),
+            "status": order.status,
+            "created_at": order.created_at.isoformat()
+        }), 200
 
-    allowed_statuses = [
-        "pending",
-        "processing",
-        "completed",
-        "cancelled"
-    ]
+    except Exception as e:
+        db.session.rollback()
 
-    if data["status"] not in allowed_statuses:
         return jsonify({
-            "message": "Invalid order status"
-        }), 400
-
-    order.status = data["status"]
-
-    db.session.commit()
-
-    return jsonify({
-        "id": order.id,
-        "user_id": order.user_id,
-        "total": float(order.total),
-        "status": order.status,
-        "created_at": order.created_at.isoformat()
-    }), 200
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
 
 
 @main.route("/orders/<int:id>", methods=["DELETE"])
@@ -720,17 +826,24 @@ def delete_order(id):
             "message": "Order not found"
         }), 404
 
-    for item in order.order_items:
-        product = item.product
+    try:
+        for item in order.order_items:
+            product = Product.query.get(item.product_id)
 
-        if product:
-            product.stock += item.quantity
+            if product:
+                product.stock += item.quantity
 
-        db.session.delete(item)
+        db.session.delete(order)
+        db.session.commit()
 
-    db.session.delete(order)
-    db.session.commit()
+        return jsonify({
+            "message": "Order deleted successfully"
+        }), 200
 
-    return jsonify({
-        "message": "Order deleted successfully"
-    }), 200
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "Internal server error",
+            "error": str(e)
+        }), 500
