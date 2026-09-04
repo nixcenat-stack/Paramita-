@@ -62,6 +62,11 @@ def create_product():
     stock = data.get("stock")
     category_id = data.get("category_id")
 
+    if name is None:
+        return jsonify({
+            "message": "name is required"
+        }), 400
+
     if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
@@ -148,6 +153,11 @@ def update_product(id):
     if "name" in data:
         name = data.get("name")
 
+        if name is None:
+            return jsonify({
+                "message": "name is required"
+            }), 400
+
         if not isinstance(name, str) or not name.strip():
             return jsonify({
                 "message": "Name must be a non-empty string"
@@ -180,6 +190,11 @@ def update_product(id):
 
     if "category_id" in data:
         category_id = data.get("category_id")
+
+        if category_id is None:
+            return jsonify({
+                "message": "Category ID is required"
+            }), 400
 
         category = Category.query.get(category_id)
 
@@ -289,6 +304,11 @@ def create_category():
 
     name = data.get("name")
 
+    if name is None:
+        return jsonify({
+            "message": "name is required"
+        }), 400
+
     if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
@@ -350,6 +370,11 @@ def update_category(id):
 
     name = data.get("name")
 
+    if name is None:
+        return jsonify({
+            "message": "name is required"
+        }), 400
+
     if not isinstance(name, str) or not name.strip():
         return jsonify({
             "message": "Name must be a non-empty string"
@@ -402,7 +427,7 @@ def delete_category(id):
 
     if category.products:
         return jsonify({
-            "message": "Cannot delete category because it has products"
+            "message": "Category cannot be deleted because it has products"
         }), 409
 
     try:
@@ -827,11 +852,13 @@ def delete_order(id):
         }), 404
 
     try:
-        for item in order.order_items:
+        for item in list(order.order_items):
             product = Product.query.get(item.product_id)
 
             if product:
                 product.stock += item.quantity
+
+            db.session.delete(item)
 
         db.session.delete(order)
         db.session.commit()
