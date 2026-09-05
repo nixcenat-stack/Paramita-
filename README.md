@@ -1,18 +1,17 @@
 # RevoShop API
 
-RevoShop API is a RESTful backend for an online store application.
+RevoShop API is a RESTful backend for an online store application built with Flask and PostgreSQL.
 
-The project provides API endpoints for managing users, products, categories, orders, and order items. The application is built with Flask, SQLAlchemy, Flask-Migrate, and PostgreSQL.
+The API manages users, products, categories, orders, and order items through a RESTful interface. The project uses SQLAlchemy as the ORM and Flask-Migrate with Alembic for database migrations.
 
 ---
 
 ## Project Overview
 
-RevoShop is a backend API designed to support the core functionality of an online store.
+RevoShop provides the backend functionality required for an online store, including:
 
-The system provides:
-
-- User registration and login
+- User registration
+- User login
 - User management
 - Product management
 - Category management
@@ -22,11 +21,11 @@ The system provides:
 - Input validation
 - Error handling
 - Database migrations
-- Automated API testing
+- Automated testing
 - Load testing
 - Production deployment
 
-The application uses PostgreSQL as the relational database and exposes functionality through a RESTful API.
+The application uses PostgreSQL as the relational database and exposes its functionality through REST API endpoints.
 
 ---
 
@@ -43,32 +42,32 @@ The application uses PostgreSQL as the relational database and exposes functiona
 
 ## Product Management
 
-- Create a product
+- Create product
 - Retrieve all products
 - Retrieve a product by ID
-- Update a product
-- Delete a product
-- Validate product input
-- Manage product stock
-- Prevent deletion of products linked to active orders
+- Update product
+- Delete product
+- Product input validation
+- Product stock management
+- Prevent deletion of products associated with active orders
 
 ## Category Management
 
-- Create a category
+- Create category
 - Retrieve all categories
 - Retrieve a category by ID
-- Update a category
-- Delete a category
-- Validate category input
+- Update category
+- Delete category
+- Category input validation
 - Prevent deletion of categories that still contain products
 
 ## Order Management
 
-- Create an order
+- Create order
 - Retrieve all orders
 - Retrieve an order by ID
 - Update order status
-- Delete an order
+- Delete order
 - Associate orders with users
 - Associate orders with products through `order_items`
 - Automatically decrease product stock when an order is created
@@ -76,11 +75,11 @@ The application uses PostgreSQL as the relational database and exposes functiona
 
 ## Validation and Error Handling
 
-The API validates user input and returns meaningful error responses for invalid requests.
+The API validates incoming data and returns meaningful JSON responses.
 
-Examples include:
+Validation includes:
 
-- Missing required fields
+- Required fields
 - Empty values
 - Invalid price
 - Invalid stock
@@ -100,19 +99,19 @@ Examples include:
 |---|---|
 | Python | Programming language |
 | Flask | Web framework |
-| Flask-SQLAlchemy | SQLAlchemy integration for Flask |
-| SQLAlchemy | Object-relational mapping |
+| Flask-SQLAlchemy | Flask database integration |
+| SQLAlchemy | ORM |
 | Flask-Migrate | Database migration management |
 | Alembic | Migration engine |
 | PostgreSQL | Relational database |
-| psycopg2-binary | PostgreSQL database driver |
+| psycopg2-binary | PostgreSQL driver |
 | python-dotenv | Environment variable management |
 | pytest | Automated testing |
 | Locust | Load testing |
+| Waitress | Local WSGI server |
 | pgAdmin | PostgreSQL administration |
 | Supabase | Production PostgreSQL hosting |
-| Vercel | Production API deployment |
-| Waitress | Local WSGI server for load testing |
+| Vercel | Production deployment |
 
 ---
 
@@ -148,22 +147,18 @@ Paramita/
 ├── .gitignore
 ├── create_tables.py
 ├── locustfile.py
+├── locust.png
+├── postman-delete.png
+├── postman-get.png
+├── postman-post.png
+├── postman-put.png
 ├── pytest.ini
+├── pytest.png
 ├── queries.sql
 ├── README.md
 ├── requirements.txt
 ├── run.py
 ├── schema.sql
-└── seed.sql
----
-
-# Testing & Evidence
-
-## Automated Testing
-
-The project was tested using pytest.
-
-Latest result:
-
-```text
-48 passed, 102 warnings
+├── seed.sql
+├── supabase-order.png
+└── supabase-tables.png
