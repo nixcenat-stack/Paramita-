@@ -155,3 +155,15 @@ Paramita/
 ├── run.py
 ├── schema.sql
 └── seed.sql
+---
+
+# Testing & Evidence
+
+## Automated Testing
+
+The project was tested using pytest.
+
+Latest result:
+
+```text
+48 passed, 102 warnings
