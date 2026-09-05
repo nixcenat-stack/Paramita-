@@ -158,6 +158,18 @@ Paramita/
 ├── README.md
 ├── requirements.txt
 ├── run.py
+---
+
+# Testing & Evidence
+
+## Automated Testing
+
+The project was tested using pytest.
+
+Latest test result:
+
+```text
+48 passed, 102 warnings
 ├── schema.sql
 ├── seed.sql
 ├── supabase-order.png
