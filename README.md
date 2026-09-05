@@ -1,17 +1,19 @@
 # RevoShop API
 
-RevoShop API adalah RESTful backend untuk aplikasi online store yang mengelola users, products, categories, orders, dan order items.
+RevoShop API is a RESTful backend for an online store application.
 
-Project ini dibangun menggunakan Flask dan PostgreSQL dengan SQLAlchemy sebagai ORM serta Flask-Migrate untuk mengelola database migrations.
+The project provides API endpoints for managing users, products, categories, orders, and order items. The application is built with Flask, SQLAlchemy, Flask-Migrate, and PostgreSQL.
 
 ---
 
 ## Project Overview
 
-RevoShop menyediakan backend API untuk kebutuhan toko online, termasuk:
+RevoShop is a backend API designed to support the core functionality of an online store.
 
-- User registration
-- User login
+The system provides:
+
+- User registration and login
+- User management
 - Product management
 - Category management
 - Order management
@@ -20,105 +22,113 @@ RevoShop menyediakan backend API untuk kebutuhan toko online, termasuk:
 - Input validation
 - Error handling
 - Database migrations
-- Automated testing
+- Automated API testing
 - Load testing
+- Production deployment
 
-Data aplikasi disimpan di PostgreSQL dan diakses melalui REST API.
+The application uses PostgreSQL as the relational database and exposes functionality through a RESTful API.
 
 ---
 
-## Features
+# Features
 
-### User
+## User Management
 
-- Create/register a new user
-- Get all users
-- Get user by ID
+- Register a new user
+- Retrieve all users
+- Retrieve a user by ID
 - Login using email and password
-- Password stored using hashing
+- Password hashing
+- User role support
 
-### Product
+## Product Management
 
-- Create product
-- Get all products
-- Get product by ID
-- Update product
-- Delete product
-- Product validation
-- Stock management
-- Prevent deletion when product is still linked to active orders
+- Create a product
+- Retrieve all products
+- Retrieve a product by ID
+- Update a product
+- Delete a product
+- Validate product input
+- Manage product stock
+- Prevent deletion of products linked to active orders
 
-### Category
+## Category Management
 
-- Create category
-- Get all categories
-- Get category by ID
-- Update category
-- Delete category
-- Category validation
-- Prevent deletion when category still contains products
+- Create a category
+- Retrieve all categories
+- Retrieve a category by ID
+- Update a category
+- Delete a category
+- Validate category input
+- Prevent deletion of categories that still contain products
 
-### Order
+## Order Management
 
-- Create order
-- Get all orders
-- Get order by ID
+- Create an order
+- Retrieve all orders
+- Retrieve an order by ID
 - Update order status
-- Delete order
-- Order linked to a user
-- Order linked to products through order_items
-- Product stock automatically decreases when an order is created
-- Product stock is restored when an order is deleted
+- Delete an order
+- Associate orders with users
+- Associate orders with products through `order_items`
+- Automatically decrease product stock when an order is created
+- Restore product stock when an order is deleted
 
-### Database
+## Validation and Error Handling
 
-The database contains:
+The API validates user input and returns meaningful error responses for invalid requests.
 
-- `users`
-- `products`
-- `categories`
-- `orders`
-- `order_items`
+Examples include:
 
-The `order_items` table connects orders and products and stores:
-
-- quantity
-- price
+- Missing required fields
+- Empty values
+- Invalid price
+- Invalid stock
+- Invalid category
+- Invalid user
+- Invalid order items
+- Duplicate category
+- Product not found
+- Category not found
+- Order not found
 
 ---
 
 # Technology Stack
 
-- Python
-- Flask
-- Flask-SQLAlchemy
-- SQLAlchemy
-- Flask-Migrate
-- Alembic
-- PostgreSQL
-- psycopg2-binary
-- python-dotenv
-- pytest
-- Locust
-- pgAdmin
-- Supabase PostgreSQL
-- Vercel
+| Technology | Purpose |
+|---|---|
+| Python | Programming language |
+| Flask | Web framework |
+| Flask-SQLAlchemy | SQLAlchemy integration for Flask |
+| SQLAlchemy | Object-relational mapping |
+| Flask-Migrate | Database migration management |
+| Alembic | Migration engine |
+| PostgreSQL | Relational database |
+| psycopg2-binary | PostgreSQL database driver |
+| python-dotenv | Environment variable management |
+| pytest | Automated testing |
+| Locust | Load testing |
+| pgAdmin | PostgreSQL administration |
+| Supabase | Production PostgreSQL hosting |
+| Vercel | Production API deployment |
+| Waitress | Local WSGI server for load testing |
 
 ---
 
 # Project Structure
 
 ```text
-revoshop-db/
+Paramita/
+│
+├── api/
+│   └── index.py
 │
 ├── app/
 │   ├── __init__.py
 │   ├── config.py
 │   ├── models.py
 │   └── routes.py
-│
-├── api/
-│   └── index.py
 │
 ├── migrations/
 │   ├── versions/
@@ -134,7 +144,6 @@ revoshop-db/
 │   ├── test_order.py
 │   └── test_product.py
 │
-├── .env
 ├── .env.example
 ├── .gitignore
 ├── create_tables.py
