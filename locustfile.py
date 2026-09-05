@@ -6,7 +6,7 @@ class RevoShopUser(HttpUser):
     wait_time = between(1, 3)
 
     product_id = 66
-    user_id = 4
+   user_id = 2
     order_id = None
 
     @task
